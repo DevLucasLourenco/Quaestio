@@ -1,6 +1,6 @@
 # Especificação: avaliação multilíngue e multimodal
 
-Status: pendente
+Status: implementado
 
 ## Objetivo
 
@@ -58,3 +58,7 @@ Cada item deve conter, quando aplicável:
 - treinar ou ajustar pesos de modelos;
 - coletar questões automaticamente de plataformas;
 - automatizar preenchimento de respostas em sites.
+
+## Implementação concluída
+
+O dataset inicial utiliza JSONL versionado e o executor registra resultados por item, categoria, idioma, status e trace do servidor. O conjunto de produção deve ser ampliado somente com questões autorizadas.

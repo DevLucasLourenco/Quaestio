@@ -1,6 +1,6 @@
 # Plano de implementação: benchmark e calibração de confiança
 
-Status: planejado
+Status: implementado
 
 ## Fase 1 — Dataset inicial
 
@@ -52,3 +52,11 @@ Saída: relatório quantitativo.
 3. métricas;
 4. calibração;
 5. regressão contínua.
+
+## Implementação concluída
+
+- loader JSONL com validação de gabarito;
+- execução em lotes de até 500 itens;
+- relatório estruturado com métricas segmentadas;
+- bins de confiança e cálculo de excesso de confiança;
+- comando `quaestio-evaluate` adicionado ao pacote.

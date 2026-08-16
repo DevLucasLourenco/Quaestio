@@ -1,6 +1,6 @@
 # Especificação: benchmark e calibração de confiança
 
-Status: pendente
+Status: implementado
 
 ## Objetivo
 
@@ -54,3 +54,7 @@ Nenhuma alteração de threshold deve transformar uma resposta incorreta em `ver
 - treinamento supervisionado;
 - coleta automática de dados de plataformas;
 - publicação de questões protegidas por direitos autorais.
+
+## Implementação concluída
+
+O relatório registra acurácia, cobertura, `needs_review`, média de confiança e gap de excesso de confiança em cinco faixas de confiança. O gabarito permanece no dataset e não é enviado como instrução ao solver.

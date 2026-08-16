@@ -1,6 +1,6 @@
 # Plano de implementação: avaliação multilíngue e multimodal
 
-Status: planejado
+Status: implementado
 
 ## Fase 1 — Formato do dataset
 
@@ -45,3 +45,10 @@ Saída: avaliação reproduzível.
 4. relatório por categoria;
 5. expansão do conjunto;
 6. decisão de ativação padrão.
+
+## Implementação concluída
+
+- schema `EvaluationItem` e `EvaluationDataset` criado;
+- dataset JSONL sintético inicial adicionado;
+- executor `quaestio-evaluate` criado;
+- métricas gerais, por categoria, por idioma e por faixa de confiança implementadas.

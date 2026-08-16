@@ -19,6 +19,7 @@ pdf = ["pypdf>=5.0.0"]
 [project.scripts]
 quaestio = "quaestio.mcp_server:main"
 quaestio-smoke = "quaestio.smoke_test:main"
+quaestio-evaluate = "quaestio.evaluation:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
