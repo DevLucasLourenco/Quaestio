@@ -1,6 +1,6 @@
 # Plano de implementação: isolamento dos testes e dos provedores externos
 
-Status: planejado
+Status: implementado
 
 ## Fase 1 — Mapeamento das dependências
 
@@ -44,3 +44,10 @@ Saída: cobertura determinística dos caminhos externos.
 4. testes de erro e configuração;
 5. comando separado de smoke test;
 6. documentação.
+
+## Implementação concluída
+
+- carregamento do `.env` pode ser desativado com `QUAESTIO_DISABLE_DOTENV`;
+- a suíte padrão remove configurações externas antes dos imports dos testes;
+- testes permanecem livres de chamadas reais por padrão;
+- o comportamento de configuração externa continua disponível para smoke tests explícitos.

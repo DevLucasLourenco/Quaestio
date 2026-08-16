@@ -1,6 +1,6 @@
 # Especificação: isolamento dos testes e dos provedores externos
 
-Status: pendente
+Status: implementado
 
 ## Objetivo
 
