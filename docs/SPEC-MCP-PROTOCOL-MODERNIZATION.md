@@ -1,6 +1,6 @@
 # Especificação: modernização do protocolo MCP
 
-Status: planejado
+Status: implementado
 
 ## Objetivo
 

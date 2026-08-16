@@ -4,6 +4,7 @@ import json
 import sys
 import time
 from dataclasses import asdict
+from importlib.metadata import PackageNotFoundError, version as package_version
 from typing import Any, Callable
 
 from .config import load_environment
@@ -39,7 +40,11 @@ sandbox = DockerSandbox()
 pdf_extractor = PdfExtractor()
 
 MCP_PROTOCOL_VERSION = "2026-07-28"
-MCP_SERVER_INFO = {"name": "quaestio", "version": "0.1.0"}
+try:
+    MCP_SERVER_VERSION = package_version("quaestio")
+except PackageNotFoundError:
+    MCP_SERVER_VERSION = "0.1.0"
+MCP_SERVER_INFO = {"name": "quaestio", "version": MCP_SERVER_VERSION}
 MCP_SERVER_CAPABILITIES = {"tools": {"listChanged": False}}
 MCP_SERVER_INSTRUCTIONS = (
     "Quaestio exposes tools for solving, parsing, verifying and evaluating questions. "
@@ -239,7 +244,7 @@ def server_capabilities() -> dict[str, Any]:
     """Describe the current server capabilities and reliability policy."""
     return {
         "name": "quaestio",
-        "version": "0.1.0",
+        "version": MCP_SERVER_VERSION,
         "features": [
             "single-question solving",
             "batch solving",
@@ -743,8 +748,19 @@ def _handle_message(message: dict[str, Any]) -> dict[str, Any] | None:
             "cacheScope": "public",
         })
     if method == "tools/call":
+        tool_name = params.get("name")
+        if not isinstance(tool_name, str) or not tool_name:
+            return _jsonrpc_response(request_id, error={
+                "code": -32602,
+                "message": "tools/call requires a non-empty tool name",
+            })
+        if tool_name not in TOOL_HANDLERS:
+            return _jsonrpc_response(request_id, error={
+                "code": -32602,
+                "message": f"unknown tool: {tool_name}",
+            })
         try:
-            result = dispatch_tool(params["name"], params.get("arguments") or {})
+            result = dispatch_tool(tool_name, params.get("arguments") or {})
             return _jsonrpc_response(request_id, {
                 "resultType": "complete",
                 "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],

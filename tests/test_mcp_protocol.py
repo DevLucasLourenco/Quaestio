@@ -279,6 +279,16 @@ def test_tool_call_rejects_missing_and_invalid_arguments():
     assert "invalid tool argument types" in invalid["result"]["content"][0]["text"]
 
 
+def test_tool_call_reports_unknown_tool_as_protocol_error():
+    response = _handle_message({
+        "jsonrpc": "2.0",
+        "id": 19,
+        "method": "tools/call",
+        "params": {"name": "does_not_exist", "arguments": {}},
+    })
+    assert response["error"]["code"] == -32602
+
+
 def test_modern_mcp_requests_require_protocol_metadata():
     response = _handle_message_impl({"jsonrpc": "2.0", "id": 99, "method": "tools/list", "params": {}})
     assert response["error"]["code"] == -32602
