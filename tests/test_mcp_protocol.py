@@ -1,11 +1,28 @@
-from quaestio.mcp_server import _handle_message
+from quaestio.mcp_server import MCP_PROTOCOL_VERSION, _handle_message as _handle_message_impl
 
 
-def test_initialize_and_list_tools_follow_mcp_shape():
-    initialized = _handle_message({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
-    assert initialized["result"]["serverInfo"]["name"] == "quaestio"
+CLIENT_META = {
+    "io.modelcontextprotocol/protocolVersion": MCP_PROTOCOL_VERSION,
+    "io.modelcontextprotocol/clientInfo": {"name": "quaestio-tests", "version": "1.0.0"},
+    "io.modelcontextprotocol/clientCapabilities": {},
+}
+
+
+def _handle_message(message):
+    params = dict(message.get("params") or {})
+    params.setdefault("_meta", CLIENT_META)
+    return _handle_message_impl({**message, "params": params})
+
+
+def test_discovery_and_list_tools_follow_modern_mcp_shape():
+    discovered = _handle_message({"jsonrpc": "2.0", "id": 1, "method": "server/discover", "params": {}})
+    assert discovered["result"]["resultType"] == "complete"
+    assert discovered["result"]["supportedVersions"] == [MCP_PROTOCOL_VERSION]
+    assert discovered["result"]["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "quaestio"
 
     listed = _handle_message({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
+    assert listed["result"]["resultType"] == "complete"
+    assert listed["result"]["cacheScope"] == "public"
     assert {tool["name"] for tool in listed["result"]["tools"]} == {
         "solve_question",
         "solve_questions_batch",
@@ -40,6 +57,7 @@ def test_tool_call_returns_structured_content():
         },
     })
     assert response["result"]["isError"] is False
+    assert response["result"]["resultType"] == "complete"
     assert response["result"]["structuredContent"]["answer"] == "9"
     assert response["result"]["structuredContent"]["status"] == "verified"
 
@@ -230,3 +248,13 @@ def test_semantic_verification_schema_accepts_attachments():
     })
     tool = next(item for item in listed["result"]["tools"] if item["name"] == "verify_answer_semantically")
     assert "attachments" in tool["inputSchema"]["properties"]
+
+
+def test_modern_mcp_requests_require_protocol_metadata():
+    response = _handle_message_impl({"jsonrpc": "2.0", "id": 99, "method": "tools/list", "params": {}})
+    assert response["error"]["code"] == -32602
+
+
+def test_legacy_protocol_methods_are_not_exposed():
+    response = _handle_message({"jsonrpc": "2.0", "id": 100, "method": "initialize", "params": {}})
+    assert response["error"]["code"] == -32601

@@ -27,8 +27,10 @@ O MCP Server atualmente expõe a primitiva `tools`. Ele não publica `resources`
 Referências de protocolo utilizadas:
 
 - [MCP — documentação oficial](https://modelcontextprotocol.io/);
-- [especificação de ferramentas](https://modelcontextprotocol.io/specification/2025-06-18/server/tools);
-- [especificação de transportes](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports);
+- [especificação MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/changelog);
+- [descoberta do servidor](https://modelcontextprotocol.io/specification/2026-07-28/server/discover);
+- [especificação de ferramentas](https://modelcontextprotocol.io/specification/2026-07-28/server/tools);
+- [especificação de stdio](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio);
 - [Python SDK oficial](https://github.com/modelcontextprotocol/python-sdk);
 - [servidores de referência oficiais](https://github.com/modelcontextprotocol/servers).
 
@@ -99,17 +101,15 @@ Os principais componentes internos são:
 
 O transporte principal é `stdio`, adequado para servidores locais. O host inicia o processo e conversa com ele por `stdin` e `stdout`; cada mensagem é JSON-RPC. Logs de inicialização são enviados para `stderr` para não corromper o canal MCP.
 
-O fallback incluído implementa os fluxos essenciais:
+O servidor implementa os fluxos modernos:
 
-1. `initialize` — negociação inicial e identificação do servidor;
-2. `notifications/initialized` — confirmação do cliente;
-3. `tools/list` — descoberta das ferramentas e seus schemas;
-4. `tools/call` — execução de uma ferramenta;
-5. `ping` — verificação de disponibilidade.
+1. `server/discover` — descoberta da versão, identidade, capacidades e instruções;
+2. `tools/list` — descoberta determinística das ferramentas, schemas e cache;
+3. `tools/call` — execução de uma ferramenta com resultado estruturado.
 
-Quando o pacote oficial `mcp` está instalado, o servidor utiliza `FastMCP` com transporte `stdio`. Sem o pacote, usa o transporte stdio mínimo incluído no projeto. Os dois caminhos registram o mesmo conjunto de ferramentas.
+Quando o pacote oficial `mcp` está instalado, o servidor utiliza o SDK moderno com transporte `stdio`. Sem o pacote, utiliza a implementação stdio mínima incluída no projeto. Os dois caminhos registram o mesmo conjunto de ferramentas e seguem o contrato moderno.
 
-O servidor não inicia uma porta HTTP. Para uma implantação HTTP seria necessário adicionar explicitamente um transporte compatível, como Streamable HTTP, conforme a [documentação oficial de transportes do MCP](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports).
+O servidor não inicia uma porta HTTP. Streamable HTTP permanece fora do escopo desta versão.
 
 ## Instalação
 
@@ -374,7 +374,7 @@ O campo `correct` só é preenchido quando o cliente fornece um gabarito por `ex
 
 ## Exemplo de chamada MCP
 
-Depois de `initialize` e `notifications/initialized`, o cliente pode chamar:
+Depois de `server/discover`, o cliente pode chamar:
 
 ```json
 {
@@ -382,6 +382,11 @@ Depois de `initialize` e `notifications/initialized`, o cliente pode chamar:
   "id": 1,
   "method": "tools/call",
   "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": {"name": "example-client", "version": "1.0.0"},
+      "io.modelcontextprotocol/clientCapabilities": {}
+    },
     "name": "solve_question",
     "arguments": {
       "question": "Qual é a capital do Brasil?",
