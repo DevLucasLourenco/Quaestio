@@ -22,7 +22,7 @@ Saída: contrato MCP centralizado e testável, sem alteração de comportamento 
 ## Fase 2 — Migração do SDK MCP
 
 - inspecionar a API disponível na versão moderna do SDK;
-- substituir a integração antiga baseada em `FastMCP` pela API moderna recomendada;
+- substituir a integração anterior pela API low-level moderna recomendada;
 - limitar a dependência `mcp` à linha moderna adotada;
 - manter a inicialização opcional somente se houver motivo técnico para o fallback próprio;
 - garantir que todos os handlers registrados mantenham nomes, argumentos e descrições corretos;
@@ -161,6 +161,5 @@ Mitigação: manter a lista determinística, definir schemas explicitamente e se
 - implementação de HTTP;
 - suporte a protocolo legado;
 - criação de resources ou prompts;
-- alteração do pipeline de Selenium;
 - troca ou avaliação de provedores de LLM;
 - criação de clientes MCP.

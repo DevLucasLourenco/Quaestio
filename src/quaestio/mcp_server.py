@@ -55,6 +55,10 @@ MCP_DISCOVERY_TTL_MS = 3_600_000
 MCP_TOOLS_TTL_MS = 300_000
 
 
+class ToolInputError(ValueError):
+    """Safe, client-facing validation error for tool arguments."""
+
+
 def _question_payload(
     question: str,
     options: list[str] | None,
@@ -643,32 +647,38 @@ def _matches_schema_type(value: Any, schema: dict[str, Any]) -> bool:
 
 def _validate_tool_arguments(name: str, arguments: Any) -> dict[str, Any]:
     if not isinstance(arguments, dict):
-        raise ValueError("tool arguments must be an object")
+        raise ToolInputError("tool arguments must be an object")
     definition = next((item for item in TOOL_DEFINITIONS if item["name"] == name), None)
     if definition is None:
-        raise ValueError(f"unknown tool: {name}")
+        raise ToolInputError(f"unknown tool: {name}")
 
     schema = definition["inputSchema"]
     properties = schema.get("properties", {})
     missing = [field for field in schema.get("required", []) if field not in arguments]
     if missing:
-        raise ValueError(f"missing required tool arguments: {', '.join(missing)}")
+        raise ToolInputError(f"missing required tool arguments: {', '.join(missing)}")
     unknown = sorted(set(arguments) - set(properties))
     if unknown and schema.get("additionalProperties") is False:
-        raise ValueError(f"unknown tool arguments: {', '.join(unknown)}")
+        raise ToolInputError(f"unknown tool arguments: {', '.join(unknown)}")
     invalid = [
         field
         for field, value in arguments.items()
         if field in properties and not _matches_schema_type(value, properties[field])
     ]
     if invalid:
-        raise ValueError(f"invalid tool argument types: {', '.join(sorted(invalid))}")
+        raise ToolInputError(f"invalid tool argument types: {', '.join(sorted(invalid))}")
     return arguments
 
 
 def dispatch_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     validated_arguments = _validate_tool_arguments(name, arguments)
     return TOOL_HANDLERS[name](**validated_arguments)
+
+
+def _safe_tool_error(exc: Exception) -> str:
+    if isinstance(exc, ToolInputError):
+        return f"Quaestio tool error: {exc}"
+    return f"Quaestio tool error: {type(exc).__name__}"
 
 
 def _jsonrpc_response(request_id: Any, result: Any = None, error: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -719,12 +729,21 @@ def _server_discovery() -> dict[str, Any]:
 
 
 def _handle_message(message: dict[str, Any]) -> dict[str, Any] | None:
-    method = message.get("method")
-    request_id = message.get("id")
-    if request_id is None:
+    if not isinstance(message, dict):
+        return _jsonrpc_response(None, error={"code": -32600, "message": "JSON-RPC message must be an object"})
+    if message.get("jsonrpc") != "2.0":
+        return _jsonrpc_response(message.get("id"), error={"code": -32600, "message": "jsonrpc must be '2.0'"})
+    if "id" not in message or message.get("id") is None:
         return None
+    if not isinstance(message.get("method"), str) or not message["method"]:
+        return _jsonrpc_response(message["id"], error={"code": -32600, "message": "method must be a non-empty string"})
 
-    params = message.get("params") or {}
+    method = message["method"]
+    request_id = message["id"]
+    if not isinstance(request_id, (str, int)) or isinstance(request_id, bool):
+        return _jsonrpc_response(request_id, error={"code": -32600, "message": "request id must be a string or number"})
+
+    params = message.get("params", {})
     if not isinstance(params, dict):
         return _jsonrpc_response(request_id, error={"code": -32602, "message": "params must be an object"})
 
@@ -770,7 +789,7 @@ def _handle_message(message: dict[str, Any]) -> dict[str, Any] | None:
         except Exception as exc:
             return _jsonrpc_response(request_id, {
                 "resultType": "complete",
-                "content": [{"type": "text", "text": f"Quaestio tool error: {exc}"}],
+                "content": [{"type": "text", "text": _safe_tool_error(exc)}],
                 "isError": True,
             })
     return _jsonrpc_response(request_id, error={"code": -32601, "message": f"Method not found: {method}"})
@@ -836,7 +855,7 @@ def _run_sdk() -> bool:
             )
         except Exception as exc:
             return types.CallToolResult(
-                content=[types.TextContent(text=f"Quaestio tool error: {exc}")],
+                content=[types.TextContent(text=_safe_tool_error(exc))],
                 is_error=True,
                 result_type="complete",
                 meta={"io.modelcontextprotocol/serverInfo": MCP_SERVER_INFO},

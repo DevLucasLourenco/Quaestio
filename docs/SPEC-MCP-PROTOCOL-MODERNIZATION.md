@@ -113,7 +113,7 @@ O transporte stdio deve cumprir estas regras:
 
 ## Dependência do SDK
 
-O projeto deve migrar para a API moderna do SDK Python MCP e limitar a dependência à linha principal adotada, evitando `mcp>=1.0.0` sem limite superior. A integração deve continuar opcional: o fallback próprio só deve permanecer se ele implementar o mesmo contrato moderno e for necessário para desenvolvimento ou diagnóstico.
+O projeto deve usar a API moderna do SDK Python MCP e limitar a dependência à linha principal adotada, evitando requisitos sem limite superior. A integração deve continuar opcional: o fallback próprio só deve permanecer se ele implementar o mesmo contrato moderno e for necessário para desenvolvimento ou diagnóstico.
 
 Se o SDK moderno for obrigatório para a execução normal, isso deve ser documentado claramente no README e coberto por teste de inicialização.
 
@@ -164,5 +164,4 @@ Perguntas completas, anexos, tokens, headers de autorização e respostas integr
 - prompts;
 - subscriptions;
 - tarefas e interações que exigem novas entradas durante uma chamada;
-- cliente Selenium ou automação de plataformas externas;
 - alteração da lógica de seleção das LLMs além do necessário para o contrato MCP.

@@ -1,4 +1,9 @@
+import io
+import json
+import sys
+
 from quaestio.mcp_server import MCP_PROTOCOL_VERSION, _handle_message as _handle_message_impl
+from quaestio.mcp_server import _handle_message, _run_fallback_stdio
 
 
 CLIENT_META = {
@@ -287,6 +292,60 @@ def test_tool_call_reports_unknown_tool_as_protocol_error():
         "params": {"name": "does_not_exist", "arguments": {}},
     })
     assert response["error"]["code"] == -32602
+
+
+def test_unexpected_tool_errors_do_not_echo_exception_details(monkeypatch):
+    def fail(**_arguments):
+        raise RuntimeError("provider key=super-secret-token")
+
+    monkeypatch.setitem(__import__("quaestio.mcp_server", fromlist=["TOOL_HANDLERS"]).TOOL_HANDLERS, "solve_question", fail)
+    response = _handle_message({
+        "jsonrpc": "2.0",
+        "id": 22,
+        "method": "tools/call",
+        "params": {"name": "solve_question", "arguments": {"question": "ok"}},
+    })
+    text = response["result"]["content"][0]["text"]
+    assert "RuntimeError" in text
+    assert "super-secret-token" not in text
+
+
+def test_invalid_jsonrpc_shapes_return_controlled_errors():
+    non_object = _handle_message_impl(["not", "an", "object"])
+    assert non_object["error"]["code"] == -32600
+
+    wrong_version = _handle_message_impl({"jsonrpc": "1.0", "id": 20, "method": "tools/list", "params": {}})
+    assert wrong_version["error"]["code"] == -32600
+
+    invalid_params = _handle_message_impl({
+        "jsonrpc": "2.0",
+        "id": 21,
+        "method": "tools/list",
+        "params": [],
+    })
+    assert invalid_params["error"]["code"] == -32602
+
+    invalid_id = _handle_message_impl({
+        "jsonrpc": "2.0",
+        "id": {"not": "allowed"},
+        "method": "tools/list",
+        "params": {},
+    })
+    assert invalid_id["error"]["code"] == -32600
+
+
+def test_fallback_stdio_handles_blank_and_invalid_lines(monkeypatch):
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    monkeypatch.setattr(sys, "stdin", io.StringIO("\n{invalid-json}\n"))
+    monkeypatch.setattr(sys, "stdout", stdout)
+    monkeypatch.setattr(sys, "stderr", stderr)
+
+    _run_fallback_stdio()
+
+    response = json.loads(stdout.getvalue().strip())
+    assert response["error"]["code"] == -32700
+    assert "method=invalid" in stderr.getvalue()
 
 
 def test_modern_mcp_requests_require_protocol_metadata():
