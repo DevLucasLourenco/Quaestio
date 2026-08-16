@@ -1,0 +1,190 @@
+"""Opt-in smoke tests for configured external providers."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import time
+from dataclasses import asdict, dataclass
+
+from .backends import OpenAICompatibleBackend
+from .config import load_environment
+from .embeddings import OpenAICompatibleEmbeddingProvider
+from .knowledge import KnowledgeBase
+from .models import ProposedAnswer, Question
+from .semantic_verifier import OpenAICompatibleSemanticVerifier
+from .service import QuaestioService
+from .translation import OpenAICompatibleTranslator
+
+
+@dataclass(frozen=True)
+class SmokeCheck:
+    name: str
+    status: str
+    duration_ms: int
+    detail: str
+
+
+def _timed(name: str, operation) -> SmokeCheck:
+    started = time.perf_counter()
+    try:
+        detail = operation()
+        return SmokeCheck(name, "passed", _duration_ms(started), detail)
+    except Exception as exc:  # smoke tests report diagnostics instead of crashing
+        return SmokeCheck(name, "failed", _duration_ms(started), f"{type(exc).__name__}: {exc}")
+
+
+def _duration_ms(started: float) -> int:
+    return round((time.perf_counter() - started) * 1000)
+
+
+def _required(name: str) -> tuple[str, str, str]:
+    base_url = os.getenv(f"{name}_BASE_URL", "")
+    api_key = os.getenv(f"{name}_API_KEY", "")
+    model = os.getenv(f"{name}_MODEL", "")
+    if not all((base_url, api_key, model)):
+        raise RuntimeError(f"missing configuration for {name}")
+    return base_url, api_key, model
+
+
+def _configured(name: str) -> bool:
+    return all(os.getenv(f"{name}_{suffix}") for suffix in ("BASE_URL", "API_KEY", "MODEL"))
+
+
+def _chat_check(name: str, prefix: str, model_name: str) -> SmokeCheck:
+    def operation() -> str:
+        base_url, api_key, model = _required(prefix)
+        backend = OpenAICompatibleBackend(
+            base_url=base_url,
+            api_key=api_key,
+            model=model,
+            timeout_seconds=float(os.getenv(f"{prefix}_TIMEOUT_SECONDS", "45")),
+            name=name,
+        )
+        outcome = backend.solve(Question(
+            question="Which option is correct? Return the option index only in the JSON contract.",
+            options=["Option A", "Option B"],
+        ))
+        if outcome.proposal is None:
+            raise RuntimeError("provider did not return a parseable proposal")
+        return f"model={model_name}; option_index={outcome.proposal.option_index}"
+
+    return _timed(name, operation)
+
+
+def _translator_check() -> SmokeCheck:
+    def operation() -> str:
+        base_url, api_key, model = _required("QUAESTIO_TRANSLATOR")
+        translator = OpenAICompatibleTranslator(
+            base_url=base_url,
+            api_key=api_key,
+            model=model,
+            timeout_seconds=float(os.getenv("QUAESTIO_TRANSLATOR_TIMEOUT_SECONDS", "30")),
+        )
+        translated = translator.translate_question(
+            Question(question="Qual é a capital do Brasil?", options=["Rio de Janeiro", "Brasília"]),
+            "pt",
+            "en",
+        )
+        if not translated.question or translated.options is None or len(translated.options) != 2:
+            raise RuntimeError("translator response did not preserve the question contract")
+        return f"model={model}; options={len(translated.options)}"
+
+    return _timed("translator", operation)
+
+
+def _embedding_check() -> SmokeCheck:
+    def operation() -> str:
+        base_url, api_key, model = _required("QUAESTIO_EMBEDDING")
+        provider = OpenAICompatibleEmbeddingProvider(
+            base_url=base_url,
+            api_key=api_key,
+            model=model,
+            timeout_seconds=float(os.getenv("QUAESTIO_EMBEDDING_TIMEOUT_SECONDS", "30")),
+        )
+        vector = provider.embed("semantic retrieval smoke test")
+        if not vector:
+            raise RuntimeError("embedding provider returned an empty vector")
+        return f"model={model}; dimensions={len(vector)}"
+
+    return _timed("embeddings", operation)
+
+
+def _verifier_check() -> SmokeCheck:
+    def operation() -> str:
+        base_url, api_key, model = _required("QUAESTIO_VERIFIER_LLM")
+        verifier = OpenAICompatibleSemanticVerifier(
+            base_url=base_url,
+            api_key=api_key,
+            model=model,
+            timeout_seconds=float(os.getenv("QUAESTIO_VERIFIER_LLM_TIMEOUT_SECONDS", "45")),
+        )
+        result = verifier.verify(
+            Question(question="Which option is correct?", options=["Option A", "Option B"]),
+            ProposedAnswer(answer="Option A", option_index=0, explanation="The first option is the candidate."),
+        )
+        if result.reason and result.reason.startswith("semantic verifier failed:"):
+            raise RuntimeError(result.reason)
+        return f"model={model}; status={result.status.value}"
+
+    return _timed("semantic_verifier", operation)
+
+
+def _end_to_end_check() -> SmokeCheck:
+    def operation() -> str:
+        service = QuaestioService(knowledge_base=KnowledgeBase(storage_path=None, embedding_provider=None))
+        result = service.solve(Question(
+            question="Qual é a capital do Brasil?",
+            options=["Rio de Janeiro", "Brasília", "São Paulo"],
+        ))
+        if result.status.value == "error":
+            raise RuntimeError("end-to-end pipeline returned error")
+        return f"status={result.status.value}; method={result.method}; trace_steps={len(result.trace)}"
+
+    return _timed("end_to_end", operation)
+
+
+def run_smoke_tests(require_all: bool = False) -> list[SmokeCheck]:
+    checks = [_chat_check("primary_llm", "QUAESTIO_LLM", os.getenv("QUAESTIO_LLM_MODEL", "<unset>"))]
+    optional_checks = [
+        ("QUAESTIO_SECONDARY_LLM", lambda: _chat_check("secondary_llm", "QUAESTIO_SECONDARY_LLM", os.getenv("QUAESTIO_SECONDARY_LLM_MODEL", "<unset>"))),
+        ("QUAESTIO_TRANSLATOR", _translator_check),
+        ("QUAESTIO_EMBEDDING", _embedding_check),
+        ("QUAESTIO_VERIFIER_LLM", _verifier_check),
+    ]
+    for prefix, operation in optional_checks:
+        if _configured(prefix):
+            checks.append(operation())
+        elif require_all:
+            checks.append(SmokeCheck(prefix, "failed", 0, "missing configuration"))
+        else:
+            checks.append(SmokeCheck(prefix, "skipped", 0, "not configured"))
+    checks.append(_end_to_end_check())
+    return checks
+
+
+def _print_human(checks: list[SmokeCheck]) -> None:
+    for check in checks:
+        print(f"[{check.status.upper():7}] {check.name:18} {check.duration_ms:>6} ms  {check.detail}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Run opt-in smoke tests against Quaestio providers.")
+    parser.add_argument("--json", action="store_true", help="print machine-readable JSON")
+    parser.add_argument("--require-all", action="store_true", help="fail if any configured check fails")
+    args = parser.parse_args(argv)
+
+    load_environment()
+    checks = run_smoke_tests(require_all=args.require_all)
+    if args.json:
+        print(json.dumps([asdict(check) for check in checks], ensure_ascii=False, indent=2))
+    else:
+        _print_human(checks)
+    failed = any(check.status == "failed" for check in checks)
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,6 +1,6 @@
 # Especificação: smoke test dos endpoints NVIDIA NIM
 
-Status: pendente
+Status: implementado
 
 ## Objetivo
 
@@ -47,3 +47,7 @@ Validar, com uma execução pequena e explícita, que os modelos configurados no
 - benchmark estatístico de qualidade;
 - teste de carga;
 - execução contra provas reais ou sistemas externos.
+
+## Implementação concluída
+
+O comando opt-in `quaestio-smoke` valida os backends configurados, o tradutor, embeddings, o verificador semântico e um fluxo end-to-end. A saída padrão não inclui credenciais nem conteúdo completo das respostas.

@@ -1,6 +1,6 @@
 # Plano de implementação: smoke test dos endpoints NVIDIA NIM
 
-Status: planejado
+Status: implementado
 
 ## Fase 1 — Harness de smoke test
 
@@ -45,3 +45,11 @@ Saída: primeiro fluxo real aprovado.
 3. integração completa;
 4. falhas controladas;
 5. documentação do comando e do resultado.
+
+## Implementação concluída
+
+- executor opt-in criado em `quaestio.smoke_test`;
+- comando `quaestio-smoke` adicionado ao pacote;
+- validações individuais e end-to-end implementadas;
+- saída humana e JSON disponíveis;
+- credenciais e respostas completas não são impressas.
