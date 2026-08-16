@@ -418,6 +418,6 @@ Documentação técnica relacionada:
 - transporte público HTTP ainda não está implementado;
 - o servidor não expõe resources ou prompts MCP;
 - o verificador semântico atual é textual; suporte visual está especificado, mas ainda é uma evolução;
-- embeddings ainda não diferenciam explicitamente `query` e `passage`;
+- o índice de embeddings exige reindexação quando o modelo configurado é trocado;
 - OCR e extração de PDF dependem de instalações locais opcionais;
 - consenso e revisão semântica reduzem risco, mas não substituem gabarito, prova formal ou revisão humana.

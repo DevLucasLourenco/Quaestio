@@ -9,7 +9,11 @@ from quaestio.service import QuaestioService
 class FakeEmbeddingProvider:
     model = "fake"
 
-    def embed(self, text):
+    def __init__(self):
+        self.calls = []
+
+    def embed(self, text, input_type="query"):
+        self.calls.append((text, input_type))
         return [1.0, 0.0] if "tcp" in text.casefold() or "transporte" in text.casefold() else [0.0, 1.0]
 
 
@@ -33,12 +37,14 @@ def test_tfidf_ranking_prefers_document_with_more_query_evidence():
 
 
 def test_embeddings_can_retrieve_without_lexical_overlap():
-    knowledge = KnowledgeBase(embedding_provider=FakeEmbeddingProvider())
+    provider = FakeEmbeddingProvider()
+    knowledge = KnowledgeBase(embedding_provider=provider)
     knowledge.add_document("tcp", "Redes", "TCP estabelece uma conexão.", "tcp.pdf")
     knowledge.add_document("other", "História", "Um evento histórico.", "historia.pdf")
     hits = knowledge.search("transporte seguro", top_k=1)
     assert hits[0].source == "tcp.pdf"
     assert hits[0].score == 1.0
+    assert [input_type for _, input_type in provider.calls] == ["passage", "passage", "query"]
 
 
 @dataclass
@@ -69,5 +75,18 @@ def test_knowledge_base_can_persist_and_reload():
         first.add_document("d1", "Aula", "Conteúdo sobre álgebra.", "aula.pdf")
         second = KnowledgeBase(path)
         assert second.search("álgebra")[0].source == "aula.pdf"
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def test_embedding_index_persists_model_metadata():
+    path = Path("tests") / "_embedding_test.json"
+    try:
+        provider = FakeEmbeddingProvider()
+        first = KnowledgeBase(path, embedding_provider=provider)
+        first.add_document("d1", "Aula", "Conteúdo sobre redes.", "aula.pdf")
+        payload = path.read_text(encoding="utf-8")
+        assert '"format_version": 2' in payload
+        assert '"embedding_model": "fake"' in payload
     finally:
         path.unlink(missing_ok=True)

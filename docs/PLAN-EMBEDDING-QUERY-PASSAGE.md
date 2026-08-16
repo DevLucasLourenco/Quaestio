@@ -1,6 +1,6 @@
 # Plano de implementação: distinção entre consulta e passagem em embeddings
 
-Status: planejado
+Status: implementado
 
 ## Fase 1 — Contrato do provedor
 
@@ -40,3 +40,12 @@ Saída: índice semanticamente consistente.
 3. metadados e migração;
 4. testes de fallback;
 5. avaliação de relevância.
+
+## Implementação concluída
+
+- protocolo de embeddings ampliado com `input_type`;
+- indexação e busca usam tipos distintos;
+- índice persistido versionado com modelo e dimensão;
+- índices antigos continuam carregáveis;
+- fallback TF-IDF permanece disponível;
+- testes cobrem chamadas e metadados.

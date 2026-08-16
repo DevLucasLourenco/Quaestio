@@ -10,7 +10,7 @@ from typing import Protocol
 class EmbeddingProvider(Protocol):
     model: str
 
-    def embed(self, text: str) -> list[float] | None:
+    def embed(self, text: str, input_type: str = "query") -> list[float] | None:
         """Return a vector or None when semantic retrieval is unavailable."""
 
 
@@ -21,8 +21,8 @@ class OpenAICompatibleEmbeddingProvider:
         self.model = model
         self.timeout_seconds = timeout_seconds
 
-    def embed(self, text: str) -> list[float] | None:
-        payload = {"model": self.model, "input": text}
+    def embed(self, text: str, input_type: str = "query") -> list[float] | None:
+        payload = {"model": self.model, "input": text, "input_type": input_type}
         request = urllib.request.Request(
             f"{self.base_url.rstrip('/')}/embeddings",
             data=json.dumps(payload).encode("utf-8"),

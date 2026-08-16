@@ -29,6 +29,7 @@ class _Document:
     tokens: set[str] = field(default_factory=set)
     term_counts: Counter[str] = field(default_factory=Counter)
     embedding: list[float] | None = None
+    embedding_model: str | None = None
 
 
 class KnowledgeBase:
@@ -47,6 +48,7 @@ class KnowledgeBase:
         content: str,
         source: str | None = None,
         embedding: list[float] | None = None,
+        embedding_model: str | None = None,
     ) -> dict[str, str]:
         if not document_id.strip() or not title.strip() or not content.strip():
             raise ValueError("document_id, title and content are required")
@@ -60,8 +62,10 @@ class KnowledgeBase:
         document.tokens = set(document.term_counts)
         if embedding is not None:
             document.embedding = [float(value) for value in embedding]
+            document.embedding_model = embedding_model or getattr(self.embedding_provider, "model", None)
         elif self.embedding_provider is not None:
-            document.embedding = self.embedding_provider.embed(f"{document.title}\n{document.content}")
+            document.embedding = self._embed(f"{document.title}\n{document.content}", "passage")
+            document.embedding_model = self.embedding_provider.model if document.embedding is not None else None
         self._documents[document.document_id] = document
         self._persist()
         return {"document_id": document.document_id, "title": document.title, "source": document.source}
@@ -71,7 +75,7 @@ class KnowledgeBase:
             raise ValueError("top_k must be between 1 and 20")
         query_counts = self._term_counts(query)
         query_tokens = set(query_counts)
-        query_embedding = self.embedding_provider.embed(query) if self.embedding_provider is not None else None
+        query_embedding = self._embed(query, "query") if self.embedding_provider is not None else None
         if not query_tokens and query_embedding is None:
             return []
         document_frequency = Counter(
@@ -84,7 +88,12 @@ class KnowledgeBase:
         hits: list[KnowledgeHit] = []
         for document in self._documents.values():
             overlap = query_tokens & document.tokens
-            has_embedding_pair = query_embedding is not None and document.embedding is not None and len(query_embedding) == len(document.embedding)
+            has_embedding_pair = (
+                query_embedding is not None
+                and document.embedding is not None
+                and document.embedding_model == getattr(self.embedding_provider, "model", None)
+                and len(query_embedding) == len(document.embedding)
+            )
             if not overlap and not has_embedding_pair:
                 continue
             if has_embedding_pair:
@@ -154,13 +163,19 @@ class KnowledgeBase:
             return
         try:
             payload = json.loads(self.storage_path.read_text(encoding="utf-8"))
-            for item in payload:
+            documents = payload.get("documents", []) if isinstance(payload, dict) else payload
+            for item in documents:
+                stored_model = item.get("embedding_model")
+                stored_embedding = item.get("embedding")
+                if self.embedding_provider is not None and stored_model != self.embedding_provider.model:
+                    stored_embedding = None
                 self.add_document(
                     document_id=item["document_id"],
                     title=item["title"],
                     content=item["content"],
                     source=item.get("source"),
-                    embedding=item.get("embedding"),
+                    embedding=stored_embedding,
+                    embedding_model=stored_model,
                 )
         except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
             # A corrupt optional index must not prevent the MCP from starting.
@@ -170,16 +185,42 @@ class KnowledgeBase:
         if self.storage_path is None:
             return
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        payload = [
-            {
-                "document_id": document.document_id,
-                "title": document.title,
-                "content": document.content,
-                "source": document.source,
-                "embedding": document.embedding,
-            }
-            for document in self._documents.values()
-        ]
+        payload = {
+            "format_version": 2,
+            "embedding_model": getattr(self.embedding_provider, "model", None),
+            "embedding_dimensions": self._embedding_dimensions(),
+            "documents": [
+                {
+                    "document_id": document.document_id,
+                    "title": document.title,
+                    "content": document.content,
+                    "source": document.source,
+                    "embedding": document.embedding,
+                    "embedding_model": document.embedding_model,
+                }
+                for document in self._documents.values()
+            ],
+        }
         temporary = self.storage_path.with_suffix(self.storage_path.suffix + ".tmp")
         temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         os.replace(temporary, self.storage_path)
+
+    def _embed(self, text: str, input_type: str) -> list[float] | None:
+        """Call current and legacy provider implementations safely."""
+
+        if self.embedding_provider is None:
+            return None
+        try:
+            return self.embedding_provider.embed(text, input_type=input_type)
+        except TypeError as exc:
+            if "input_type" not in str(exc):
+                raise
+            return self.embedding_provider.embed(text)
+
+    def _embedding_dimensions(self) -> int | None:
+        dimensions = {
+            len(document.embedding)
+            for document in self._documents.values()
+            if document.embedding is not None
+        }
+        return dimensions.pop() if len(dimensions) == 1 else None

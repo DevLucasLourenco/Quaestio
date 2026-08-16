@@ -1,6 +1,6 @@
 # Especificação: distinção entre consulta e passagem em embeddings
 
-Status: pendente
+Status: implementado
 
 ## Objetivo
 
@@ -39,3 +39,7 @@ Ao trocar o modelo, o sistema deve solicitar ou executar reindexação controlad
 - embeddings de imagem;
 - reranking neural;
 - alteração do contrato MCP de busca.
+
+## Implementação concluída
+
+O provedor envia `input_type=passage` na indexação e `input_type=query` na busca. O índice persistido guarda modelo, dimensão e versão de formato; vetores de modelo incompatível são reindexados quando um provedor está disponível.
