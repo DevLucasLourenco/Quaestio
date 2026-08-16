@@ -108,6 +108,7 @@ O servidor implementa os fluxos modernos:
 3. `tools/call` — execução de uma ferramenta com resultado estruturado.
 
 Quando o pacote oficial `mcp` está instalado, o servidor utiliza o SDK moderno com transporte `stdio`. Sem o pacote, utiliza a implementação stdio mínima incluída no projeto. Os dois caminhos registram o mesmo conjunto de ferramentas e seguem o contrato moderno.
+Cada ferramenta declara `inputSchema` e `outputSchema`; o caminho stdio mínimo também valida argumentos antes de executar o handler.
 
 O servidor não inicia uma porta HTTP. Streamable HTTP permanece fora do escopo desta versão.
 

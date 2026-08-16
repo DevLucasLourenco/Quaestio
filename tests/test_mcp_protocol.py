@@ -248,6 +248,35 @@ def test_semantic_verification_schema_accepts_attachments():
     })
     tool = next(item for item in listed["result"]["tools"] if item["name"] == "verify_answer_semantically")
     assert "attachments" in tool["inputSchema"]["properties"]
+    assert tool["outputSchema"]["type"] == "object"
+
+
+def test_every_tool_exposes_input_and_output_schemas():
+    listed = _handle_message({"jsonrpc": "2.0", "id": 16, "method": "tools/list", "params": {}})
+    for tool in listed["result"]["tools"]:
+        assert tool["inputSchema"]["type"] == "object"
+        assert "outputSchema" in tool
+        assert isinstance(tool["outputSchema"], dict)
+
+
+def test_tool_call_rejects_missing_and_invalid_arguments():
+    missing = _handle_message({
+        "jsonrpc": "2.0",
+        "id": 17,
+        "method": "tools/call",
+        "params": {"name": "solve_question", "arguments": {}},
+    })
+    assert missing["result"]["isError"] is True
+    assert "missing required" in missing["result"]["content"][0]["text"]
+
+    invalid = _handle_message({
+        "jsonrpc": "2.0",
+        "id": 18,
+        "method": "tools/call",
+        "params": {"name": "solve_question", "arguments": {"question": 42}},
+    })
+    assert invalid["result"]["isError"] is True
+    assert "invalid tool argument types" in invalid["result"]["content"][0]["text"]
 
 
 def test_modern_mcp_requests_require_protocol_metadata():

@@ -9,12 +9,23 @@ from .config import load_environment
 
 load_environment()
 
-from .models import Attachment, ProposedAnswer, Question
-from .code_analysis import CodeAnalyzer
+from .models import (
+    Answer,
+    Attachment,
+    BatchAnswer,
+    Classification,
+    ExtractionResult,
+    KnowledgeSearchHit,
+    ProposedAnswer,
+    Question,
+    SemanticCheck,
+    Verification,
+)
+from .code_analysis import CodeAnalysis, CodeAnalyzer, CompilationResult
 from .parser import QuestionParser
 from .vision import QuestionImageExtractor
 from .ocr import TesseractOcr
-from .sandbox import DockerSandbox
+from .sandbox import DockerSandbox, ExecutionResult
 from .pdf import PdfExtractor
 from .service import QuaestioService
 
@@ -257,7 +268,6 @@ def server_capabilities() -> dict[str, Any]:
             "per-question audit trace",
         ],
         "policy": "never guess when no reliable proposal is available; return needs_review",
-        "future_adapters": ["OCR-to-parser workflow", "additional Docker language runners", "Playwright client"],
     }
 
 
@@ -480,6 +490,102 @@ TOOL_DEFINITIONS = [
     },
 ]
 
+
+def _object_output_schema(properties: dict[str, Any], required: list[str] | None = None) -> dict[str, Any]:
+    schema: dict[str, Any] = {
+        "type": "object",
+        "properties": properties,
+        "additionalProperties": False,
+    }
+    if required:
+        schema["required"] = required
+    return schema
+
+
+def _dataclass_output_schema(properties: dict[str, Any]) -> dict[str, Any]:
+    return _object_output_schema(properties)
+
+
+OUTPUT_SCHEMAS: dict[str, dict[str, Any]] = {
+    "solve_question": Answer.model_json_schema(),
+    "solve_questions_batch": BatchAnswer.model_json_schema(),
+    "verify_answer": Verification.model_json_schema(),
+    "verify_answer_semantically": SemanticCheck.model_json_schema(),
+    "classify_question": Classification.model_json_schema(),
+    "search_study_material": {"type": "array", "items": KnowledgeSearchHit.model_json_schema()},
+    "analyze_code": CodeAnalysis.model_json_schema(),
+    "compile_code": CompilationResult.model_json_schema(),
+    "evaluate_questions": BatchAnswer.model_json_schema(),
+    "extract_questions_from_image": ExtractionResult.model_json_schema(),
+    "run_code": ExecutionResult.model_json_schema(),
+    "add_study_material": _object_output_schema(
+        {"document_id": {"type": "string"}, "title": {"type": "string"}, "source": {"type": "string"}},
+        ["document_id", "title", "source"],
+    ),
+    "server_capabilities": _object_output_schema(
+        {
+            "name": {"type": "string"},
+            "version": {"type": "string"},
+            "features": {"type": "array", "items": {"type": "string"}},
+            "policy": {"type": "string"},
+        },
+        ["name", "version", "features", "policy"],
+    ),
+    "parse_questions": _object_output_schema(
+        {
+            "questions": {"type": "array", "items": Question.model_json_schema()},
+            "count": {"type": "integer"},
+            "warnings": {"type": "array", "items": {"type": "string"}},
+        },
+        ["questions", "count", "warnings"],
+    ),
+    "solve_text": {
+        "allOf": [
+            BatchAnswer.model_json_schema(),
+            _object_output_schema({"parse_warnings": {"type": "array", "items": {"type": "string"}}}, ["parse_warnings"]),
+        ],
+    },
+    "ocr_image": _dataclass_output_schema(
+        {"text": {"type": "string"}, "method": {"type": "string"}, "warnings": {"type": "array", "items": {"type": "string"}}}
+    ),
+    "ocr_parse_image": _object_output_schema(
+        {
+            "text": {"type": "string"},
+            "questions": {"type": "array", "items": Question.model_json_schema()},
+            "count": {"type": "integer"},
+            "method": {"type": "string"},
+            "warnings": {"type": "array", "items": {"type": "string"}},
+        },
+        ["text", "questions", "count", "method", "warnings"],
+    ),
+    "extract_pdf_text": _dataclass_output_schema(
+        {
+            "text": {"type": "string"},
+            "pages": {"type": "integer"},
+            "method": {"type": "string"},
+            "warnings": {"type": "array", "items": {"type": "string"}},
+        }
+    ),
+    "extract_questions_from_pdf": _object_output_schema(
+        {
+            "text": {"type": "string"},
+            "pages": {"type": "integer"},
+            "questions": {"type": "array", "items": Question.model_json_schema()},
+            "count": {"type": "integer"},
+            "method": {"type": "string"},
+            "warnings": {"type": "array", "items": {"type": "string"}},
+        },
+        ["text", "pages", "questions", "count", "method", "warnings"],
+    ),
+}
+
+for tool_definition in TOOL_DEFINITIONS:
+    tool_definition["inputSchema"].setdefault("additionalProperties", False)
+    tool_definition["outputSchema"] = OUTPUT_SCHEMAS.get(
+        tool_definition["name"],
+        {"type": "object", "additionalProperties": True},
+    )
+
 TOOL_HANDLERS: dict[str, Callable[..., dict[str, Any]]] = {
     "solve_question": solve_question,
     "solve_questions_batch": solve_questions_batch,
@@ -503,10 +609,60 @@ TOOL_HANDLERS: dict[str, Callable[..., dict[str, Any]]] = {
 }
 
 
-def dispatch_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    if name not in TOOL_HANDLERS:
+def _schema_types(schema: dict[str, Any]) -> set[str]:
+    declared = schema.get("type", [])
+    if isinstance(declared, str):
+        return {declared}
+    return set(declared)
+
+
+def _matches_schema_type(value: Any, schema: dict[str, Any]) -> bool:
+    types = _schema_types(schema)
+    if value is None:
+        return "null" in types
+    if "string" in types and isinstance(value, str):
+        return True
+    if "array" in types and isinstance(value, list):
+        return True
+    if "object" in types and isinstance(value, dict):
+        return True
+    if "boolean" in types and isinstance(value, bool):
+        return True
+    if "integer" in types and isinstance(value, int) and not isinstance(value, bool):
+        return True
+    if "number" in types and isinstance(value, (int, float)) and not isinstance(value, bool):
+        return True
+    return not types
+
+
+def _validate_tool_arguments(name: str, arguments: Any) -> dict[str, Any]:
+    if not isinstance(arguments, dict):
+        raise ValueError("tool arguments must be an object")
+    definition = next((item for item in TOOL_DEFINITIONS if item["name"] == name), None)
+    if definition is None:
         raise ValueError(f"unknown tool: {name}")
-    return TOOL_HANDLERS[name](**arguments)
+
+    schema = definition["inputSchema"]
+    properties = schema.get("properties", {})
+    missing = [field for field in schema.get("required", []) if field not in arguments]
+    if missing:
+        raise ValueError(f"missing required tool arguments: {', '.join(missing)}")
+    unknown = sorted(set(arguments) - set(properties))
+    if unknown and schema.get("additionalProperties") is False:
+        raise ValueError(f"unknown tool arguments: {', '.join(unknown)}")
+    invalid = [
+        field
+        for field, value in arguments.items()
+        if field in properties and not _matches_schema_type(value, properties[field])
+    ]
+    if invalid:
+        raise ValueError(f"invalid tool argument types: {', '.join(sorted(invalid))}")
+    return arguments
+
+
+def dispatch_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    validated_arguments = _validate_tool_arguments(name, arguments)
+    return TOOL_HANDLERS[name](**validated_arguments)
 
 
 def _jsonrpc_response(request_id: Any, result: Any = None, error: dict[str, Any] | None = None) -> dict[str, Any]:
