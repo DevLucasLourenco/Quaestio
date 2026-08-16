@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from dataclasses import asdict
 from typing import Any, Callable
 
@@ -670,6 +671,8 @@ def _jsonrpc_response(request_id: Any, result: Any = None, error: dict[str, Any]
     if error is not None:
         response["error"] = error
     else:
+        if isinstance(result, dict):
+            result.setdefault("_meta", {"io.modelcontextprotocol/serverInfo": MCP_SERVER_INFO})
         response["result"] = result
     return response
 
@@ -725,6 +728,12 @@ def _handle_message(message: dict[str, Any]) -> dict[str, Any] | None:
         return _jsonrpc_response(request_id, error=meta_error)
 
     if method == "server/discover":
+        extra_params = set(params) - {"_meta"}
+        if extra_params:
+            return _jsonrpc_response(request_id, error={
+                "code": -32602,
+                "message": f"server/discover does not accept parameters: {', '.join(sorted(extra_params))}",
+            })
         return _jsonrpc_response(request_id, _server_discovery())
     if method == "tools/list":
         return _jsonrpc_response(request_id, {
@@ -755,25 +764,97 @@ def _run_fallback_stdio() -> None:
     for line in sys.stdin:
         if not line.strip():
             continue
+        started = time.perf_counter()
+        method = "invalid"
+        outcome = "error"
         try:
             message = json.loads(line)
+            method = str(message.get("method", "unknown")) if isinstance(message, dict) else "invalid"
             response = _handle_message(message)
+            outcome = "notification" if response is None else "success"
         except json.JSONDecodeError as exc:
             response = _jsonrpc_response(None, error={"code": -32700, "message": str(exc)})
         if response is not None:
             print(json.dumps(response, ensure_ascii=False), flush=True)
+        duration_ms = round((time.perf_counter() - started) * 1000)
+        print(f"Quaestio MCP method={method} outcome={outcome} duration_ms={duration_ms}", file=sys.stderr, flush=True)
 
 
 def _run_sdk() -> bool:
     """Use the official modern SDK when installed; otherwise use our stdio implementation."""
     try:
-        from mcp.server.fastmcp import FastMCP
+        import anyio
+        import mcp_types as types
+        from mcp.server import Server
+        from mcp.server.stdio import stdio_server
     except ImportError:
         return False
-    sdk = FastMCP("quaestio")
-    for handler in TOOL_HANDLERS.values():
-        sdk.tool()(handler)
-    sdk.run()
+
+    async def list_tools(_context: Any, _params: Any) -> Any:
+        tools = [
+            types.Tool(
+                name=definition["name"],
+                description=definition["description"],
+                input_schema=definition["inputSchema"],
+                output_schema=definition["outputSchema"],
+            )
+            for definition in TOOL_DEFINITIONS
+        ]
+        return types.ListToolsResult(
+            tools=tools,
+            result_type="complete",
+            ttl_ms=MCP_TOOLS_TTL_MS,
+            cache_scope="public",
+            meta={"io.modelcontextprotocol/serverInfo": MCP_SERVER_INFO},
+        )
+
+    async def call_tool(_context: Any, params: Any) -> Any:
+        try:
+            result = dispatch_tool(params.name, params.arguments or {})
+            return types.CallToolResult(
+                content=[types.TextContent(text=json.dumps(result, ensure_ascii=False))],
+                structured_content=result,
+                is_error=False,
+                result_type="complete",
+                meta={"io.modelcontextprotocol/serverInfo": MCP_SERVER_INFO},
+            )
+        except Exception as exc:
+            return types.CallToolResult(
+                content=[types.TextContent(text=f"Quaestio tool error: {exc}")],
+                is_error=True,
+                result_type="complete",
+                meta={"io.modelcontextprotocol/serverInfo": MCP_SERVER_INFO},
+            )
+
+    sdk = Server(
+        name=MCP_SERVER_INFO["name"],
+        version=MCP_SERVER_INFO["version"],
+        instructions=MCP_SERVER_INSTRUCTIONS,
+        on_list_tools=list_tools,
+        on_call_tool=call_tool,
+        on_ping=None,
+    )
+
+    async def discover(_context: Any, _params: Any) -> Any:
+        return types.DiscoverResult(
+            supported_versions=[MCP_PROTOCOL_VERSION],
+            capabilities=types.ServerCapabilities(
+                tools=types.ToolsCapability(list_changed=False),
+            ),
+            instructions=MCP_SERVER_INSTRUCTIONS,
+            result_type="complete",
+            ttl_ms=MCP_DISCOVERY_TTL_MS,
+            cache_scope="public",
+            meta={"io.modelcontextprotocol/serverInfo": MCP_SERVER_INFO},
+        )
+
+    sdk.add_request_handler("server/discover", types.RequestParams, discover)
+
+    async def run() -> None:
+        async with stdio_server() as (read_stream, write_stream):
+            await sdk.run(read_stream, write_stream, sdk.create_initialization_options())
+
+    anyio.run(run)
     return True
 
 

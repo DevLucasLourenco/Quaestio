@@ -284,6 +284,37 @@ def test_modern_mcp_requests_require_protocol_metadata():
     assert response["error"]["code"] == -32602
 
 
+def test_protocol_version_mismatch_is_rejected():
+    response = _handle_message_impl({
+        "jsonrpc": "2.0",
+        "id": 101,
+        "method": "server/discover",
+        "params": {
+            "_meta": {
+                **CLIENT_META,
+                "io.modelcontextprotocol/protocolVersion": "2024-11-05",
+            },
+        },
+    })
+    assert response["error"]["code"] == -32022
+    assert response["error"]["data"]["supportedVersions"] == [MCP_PROTOCOL_VERSION]
+
+
+def test_server_discovery_rejects_non_metadata_parameters():
+    response = _handle_message({
+        "jsonrpc": "2.0",
+        "id": 102,
+        "method": "server/discover",
+        "params": {"unexpected": True},
+    })
+    assert response["error"]["code"] == -32602
+
+
+def test_success_results_identify_the_server_in_meta():
+    response = _handle_message({"jsonrpc": "2.0", "id": 103, "method": "tools/list", "params": {}})
+    assert response["result"]["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "quaestio"
+
+
 def test_legacy_protocol_methods_are_not_exposed():
     response = _handle_message({"jsonrpc": "2.0", "id": 100, "method": "initialize", "params": {}})
     assert response["error"]["code"] == -32601
