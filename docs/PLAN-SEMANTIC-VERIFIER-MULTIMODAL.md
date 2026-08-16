@@ -1,6 +1,6 @@
 # Plano de implementação: verificação semântica multimodal
 
-Status: planejado
+Status: implementado
 
 ## Fase 1 — Contrato de conteúdo multimodal
 
@@ -44,3 +44,11 @@ Saída: verificador compatível com modelos textuais e multimodais.
 4. testes unitários;
 5. smoke test multimodal;
 6. avaliação no dataset.
+
+## Implementação concluída
+
+- payload multimodal adicionado ao verificador;
+- anexos inline preservados e enviados como `image_url` data URI;
+- ferramenta MCP aceita `attachments`;
+- fallback textual e comportamento conservador foram mantidos;
+- testes cobrem schema MCP e payload visual.

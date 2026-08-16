@@ -86,9 +86,10 @@ def verify_answer_semantically(
     option_index: int | None = None,
     explanation: str | None = None,
     context: str | None = None,
+    attachments: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Run the optional independent semantic verifier on a proposal."""
-    parsed_question = _question_payload(question, options, None, context)
+    parsed_question = _question_payload(question, options, None, context, attachments)
     proposal = ProposedAnswer(answer=proposed_answer, option_index=option_index, explanation=explanation)
     return service.verify_semantically(parsed_question, proposal).model_dump(mode="json")
 
@@ -241,6 +242,7 @@ def server_capabilities() -> dict[str, Any]:
             "optional PDF text extraction and parsing",
             "optional Docker sandbox execution",
             "optional independent semantic verification",
+            "semantic verification with inline image attachments",
             "per-question audit trace",
         ],
         "policy": "never guess when no reliable proposal is available; return needs_review",
@@ -304,6 +306,7 @@ TOOL_DEFINITIONS = [
                 "option_index": {"type": ["integer", "null"]},
                 "explanation": {"type": ["string", "null"]},
                 "context": {"type": ["string", "null"]},
+                "attachments": {"type": ["array", "null"], "items": {"type": "object"}},
             },
             "required": ["question", "proposed_answer"],
         },

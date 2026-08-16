@@ -417,7 +417,7 @@ Documentação técnica relacionada:
 
 - transporte público HTTP ainda não está implementado;
 - o servidor não expõe resources ou prompts MCP;
-- o verificador semântico atual é textual; suporte visual está especificado, mas ainda é uma evolução;
+- o verificador semântico aceita imagens inline; URIs externas, PDFs e vídeo ainda não são enviados nessa etapa;
 - o índice de embeddings exige reindexação quando o modelo configurado é trocado;
 - OCR e extração de PDF dependem de instalações locais opcionais;
 - consenso e revisão semântica reduzem risco, mas não substituem gabarito, prova formal ou revisão humana.

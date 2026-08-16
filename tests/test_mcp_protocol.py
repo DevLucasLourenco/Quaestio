@@ -219,3 +219,14 @@ def test_semantic_verification_is_explicit_when_not_configured():
     })
     result = response["result"]["structuredContent"]
     assert result["status"] == "not_configured"
+
+
+def test_semantic_verification_schema_accepts_attachments():
+    listed = _handle_message({
+        "jsonrpc": "2.0",
+        "id": 14,
+        "method": "tools/list",
+        "params": {},
+    })
+    tool = next(item for item in listed["result"]["tools"] if item["name"] == "verify_answer_semantically")
+    assert "attachments" in tool["inputSchema"]["properties"]

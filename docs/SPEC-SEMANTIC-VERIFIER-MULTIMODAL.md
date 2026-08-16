@@ -1,6 +1,6 @@
 # Especificação: verificação semântica multimodal
 
-Status: pendente
+Status: implementado
 
 ## Objetivo
 
@@ -50,3 +50,7 @@ O backend deve continuar aceitando modelos somente textuais. Nesse caso, o compo
 - extrair novas questões da imagem;
 - substituir o solver multimodal;
 - aceitar vídeo ou áudio nesta primeira versão.
+
+## Implementação concluída
+
+O verificador aceita imagens inline em `verify_answer_semantically` e no fluxo integrado de resolução. Anexos sem bytes inline permanecem no contexto textual, sem que o servidor tente buscar URIs externas.
