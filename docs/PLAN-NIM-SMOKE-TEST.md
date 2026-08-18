@@ -8,6 +8,8 @@ Status: implementado
 - carregar o `.env` somente quando o comando for executado explicitamente;
 - validar previamente a presença das variáveis necessárias;
 - mascarar credenciais em toda saída.
+- adicionar um limitador local ao processo de smoke, com teto de 40 requisições por janela móvel de 60 segundos;
+- manter o limitador fora dos módulos de produção para que o MCP não herde essa restrição.
 
 Saída: executor opt-in com diagnóstico seguro.
 
@@ -53,3 +55,4 @@ Saída: primeiro fluxo real aprovado.
 - validações individuais e end-to-end implementadas;
 - saída humana e JSON disponíveis;
 - credenciais e respostas completas não são impressas.
+- o limite de 40 requisições/minuto é aplicado somente no comando `quaestio-smoke`.

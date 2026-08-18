@@ -1,0 +1,578 @@
+{
+  "dataset_version": "benchmark-v1",
+  "summary": {
+    "total": 30,
+    "evaluated": 30,
+    "correct": 30,
+    "incorrect": 0,
+    "needs_review": 0,
+    "failed": 0,
+    "coverage": 1.0,
+    "accuracy": 1.0,
+    "average_confidence": 0.45333333333333337
+  },
+  "by_category": {
+    "computer_science": {
+      "total": 1,
+      "evaluated": 1,
+      "correct": 1,
+      "incorrect": 0,
+      "needs_review": 0,
+      "failed": 0,
+      "coverage": 1.0,
+      "accuracy": 1.0,
+      "average_confidence": 0.4
+    },
+    "general_science": {
+      "total": 2,
+      "evaluated": 2,
+      "correct": 2,
+      "incorrect": 0,
+      "needs_review": 0,
+      "failed": 0,
+      "coverage": 1.0,
+      "accuracy": 1.0,
+      "average_confidence": 0.4
+    },
+    "general_technology": {
+      "total": 1,
+      "evaluated": 1,
+      "correct": 1,
+      "incorrect": 0,
+      "needs_review": 0,
+      "failed": 0,
+      "coverage": 1.0,
+      "accuracy": 1.0,
+      "average_confidence": 0.4
+    },
+    "geography": {
+      "total": 1,
+      "evaluated": 1,
+      "correct": 1,
+      "incorrect": 0,
+      "needs_review": 0,
+      "failed": 0,
+      "coverage": 1.0,
+      "accuracy": 1.0,
+      "average_confidence": 0.4
+    },
+    "math": {
+      "total": 13,
+      "evaluated": 13,
+      "correct": 13,
+      "incorrect": 0,
+      "needs_review": 0,
+      "failed": 0,
+      "coverage": 1.0,
+      "accuracy": 1.0,
+      "average_confidence": 0.49230769230769234
+    },
+    "software_engineering": {
+      "total": 12,
+      "evaluated": 12,
+      "correct": 12,
+      "incorrect": 0,
+      "needs_review": 0,
+      "failed": 0,
+      "coverage": 1.0,
+      "accuracy": 1.0,
+      "average_confidence": 0.43333333333333335
+    }
+  },
+  "by_language": {
+    "en": {
+      "total": 12,
+      "evaluated": 12,
+      "correct": 12,
+      "incorrect": 0,
+      "needs_review": 0,
+      "failed": 0,
+      "coverage": 1.0,
+      "accuracy": 1.0,
+      "average_confidence": 0.43333333333333335
+    },
+    "pt": {
+      "total": 18,
+      "evaluated": 18,
+      "correct": 18,
+      "incorrect": 0,
+      "needs_review": 0,
+      "failed": 0,
+      "coverage": 1.0,
+      "accuracy": 1.0,
+      "average_confidence": 0.4666666666666667
+    }
+  },
+  "confidence_bins": [
+    {
+      "lower": 0.0,
+      "upper": 0.2,
+      "total": 0,
+      "evaluated": 0,
+      "correct": 0,
+      "accuracy": null,
+      "average_confidence": null,
+      "overconfidence_gap": null
+    },
+    {
+      "lower": 0.2,
+      "upper": 0.4,
+      "total": 0,
+      "evaluated": 0,
+      "correct": 0,
+      "accuracy": null,
+      "average_confidence": null,
+      "overconfidence_gap": null
+    },
+    {
+      "lower": 0.4,
+      "upper": 0.6,
+      "total": 28,
+      "evaluated": 28,
+      "correct": 28,
+      "accuracy": 1.0,
+      "average_confidence": 0.4142857142857143,
+      "overconfidence_gap": -0.5857142857142856
+    },
+    {
+      "lower": 0.6,
+      "upper": 0.8,
+      "total": 0,
+      "evaluated": 0,
+      "correct": 0,
+      "accuracy": null,
+      "average_confidence": null,
+      "overconfidence_gap": null
+    },
+    {
+      "lower": 0.8,
+      "upper": 1.0,
+      "total": 30,
+      "evaluated": 30,
+      "correct": 30,
+      "accuracy": 1.0,
+      "average_confidence": 0.45333333333333337,
+      "overconfidence_gap": -0.5466666666666666
+    }
+  ],
+  "records": [
+    {
+      "id": "math-001",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "easy",
+      "status": "verified",
+      "correct": true,
+      "confidence": 1.0,
+      "method": "deterministic_math",
+      "option_index": 1,
+      "warnings": []
+    },
+    {
+      "id": "math-002",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus",
+      "option_index": 1,
+      "warnings": [
+        "answer localization failed: HTTPError"
+      ]
+    },
+    {
+      "id": "math-003",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 1,
+      "warnings": [
+        "question translation failed: HTTPError",
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "math-004",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus",
+      "option_index": 2,
+      "warnings": [
+        "answer localization failed: HTTPError"
+      ]
+    },
+    {
+      "id": "math-005",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "easy",
+      "status": "verified",
+      "correct": true,
+      "confidence": 1.0,
+      "method": "deterministic_math",
+      "option_index": 2,
+      "warnings": []
+    },
+    {
+      "id": "math-006",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 2,
+      "warnings": [
+        "question translation failed: HTTPError",
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "math-007",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "medium",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus",
+      "option_index": 2,
+      "warnings": [
+        "answer localization failed: TimeoutError"
+      ]
+    },
+    {
+      "id": "math-008",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 3,
+      "warnings": [
+        "only one independent backend produced a proposal",
+        "answer localization failed: HTTPError"
+      ]
+    },
+    {
+      "id": "math-009",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 0,
+      "warnings": [
+        "question translation failed: HTTPError",
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "math-010",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 1,
+      "warnings": [
+        "question translation failed: HTTPError",
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "math-011",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "medium",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 1,
+      "warnings": [
+        "only one independent backend produced a proposal",
+        "answer localization failed: TimeoutError"
+      ]
+    },
+    {
+      "id": "math-012",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 1,
+      "warnings": [
+        "question translation failed: HTTPError",
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "software-001",
+      "language": "en",
+      "category": "software_engineering",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 2,
+      "warnings": [
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "software-002",
+      "language": "en",
+      "category": "software_engineering",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 0,
+      "warnings": [
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "software-003",
+      "language": "en",
+      "category": "software_engineering",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 1,
+      "warnings": [
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "software-004",
+      "language": "en",
+      "category": "software_engineering",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 1,
+      "warnings": [
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "software-005",
+      "language": "en",
+      "category": "software_engineering",
+      "difficulty": "medium",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.5,
+      "method": "consensus",
+      "option_index": 0,
+      "warnings": []
+    },
+    {
+      "id": "software-006",
+      "language": "en",
+      "category": "software_engineering",
+      "difficulty": "medium",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 1,
+      "warnings": [
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "software-007",
+      "language": "en",
+      "category": "software_engineering",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.5,
+      "method": "consensus",
+      "option_index": 1,
+      "warnings": []
+    },
+    {
+      "id": "software-008",
+      "language": "en",
+      "category": "software_engineering",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 0,
+      "warnings": [
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "software-009",
+      "language": "en",
+      "category": "software_engineering",
+      "difficulty": "medium",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 0,
+      "warnings": [
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "software-010",
+      "language": "en",
+      "category": "software_engineering",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 0,
+      "warnings": [
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "software-011",
+      "language": "en",
+      "category": "software_engineering",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.5,
+      "method": "consensus",
+      "option_index": 2,
+      "warnings": []
+    },
+    {
+      "id": "software-012",
+      "language": "en",
+      "category": "software_engineering",
+      "difficulty": "medium",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.5,
+      "method": "consensus",
+      "option_index": 1,
+      "warnings": []
+    },
+    {
+      "id": "general-001",
+      "language": "pt",
+      "category": "general_technology",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus",
+      "option_index": 0,
+      "warnings": [
+        "question translation failed: TimeoutError"
+      ]
+    },
+    {
+      "id": "general-002",
+      "language": "pt",
+      "category": "general_science",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus",
+      "option_index": 1,
+      "warnings": [
+        "question translation failed: HTTPError"
+      ]
+    },
+    {
+      "id": "general-003",
+      "language": "pt",
+      "category": "geography",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 1,
+      "warnings": [
+        "only one independent backend produced a proposal",
+        "answer localization failed: HTTPError"
+      ]
+    },
+    {
+      "id": "general-004",
+      "language": "pt",
+      "category": "math",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 2,
+      "warnings": [
+        "question translation failed: HTTPError",
+        "only one independent backend produced a proposal"
+      ]
+    },
+    {
+      "id": "general-005",
+      "language": "pt",
+      "category": "computer_science",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus",
+      "option_index": 2,
+      "warnings": [
+        "question translation failed: HTTPError"
+      ]
+    },
+    {
+      "id": "general-006",
+      "language": "pt",
+      "category": "general_science",
+      "difficulty": "easy",
+      "status": "answered",
+      "correct": true,
+      "confidence": 0.4,
+      "method": "consensus_partial",
+      "option_index": 1,
+      "warnings": [
+        "question translation failed: HTTPError",
+        "only one independent backend produced a proposal"
+      ]
+    }
+  ]
+}

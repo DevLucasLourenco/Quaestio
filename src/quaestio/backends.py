@@ -112,12 +112,29 @@ class DeterministicMathBackend:
             return str(int(value))
         return str(value)
 
-    @staticmethod
-    def _find_option(question: Question, answer: str) -> int | None:
+    @classmethod
+    def _find_option(cls, question: Question, answer: str) -> int | None:
         for index, option in enumerate(question.options or []):
             if option.strip().casefold() == answer.casefold():
                 return index
+        answer_value = cls._numeric_value(answer)
+        if answer_value is None:
+            return None
+        for index, option in enumerate(question.options or []):
+            option_value = cls._numeric_value(option)
+            if option_value is not None and abs(option_value - answer_value) <= 1e-9:
+                return index
         return None
+
+    @classmethod
+    def _numeric_value(cls, value: str) -> float | None:
+        candidate = value.strip().replace("−", "-")
+        if not re.fullmatch(r"[0-9.+*/()%\s-]+", candidate):
+            return None
+        try:
+            return float(cls._evaluate(candidate))
+        except (SyntaxError, ValueError, ZeroDivisionError):
+            return None
 
 
 class SymbolicMathBackend:

@@ -19,6 +19,8 @@ Validar, com uma execução pequena e explícita, que os modelos configurados no
 - o teste deve usar somente questões sintéticas ou autorizadas;
 - nenhum gabarito secreto deve ser enviado ao solver;
 - o teste deve ser opt-in e nunca fazer parte do `pytest` padrão;
+- o processo `quaestio-smoke` deve limitar chamadas HTTP de provedores a no máximo 40 por janela móvel de 60 segundos;
+- essa limitação pertence exclusivamente ao harness de smoke test e não pode ser importada pelo servidor MCP nem pelos backends de produção;
 - respostas e anexos enviados não devem ser persistidos por padrão;
 - uma chave ausente ou resposta incompatível deve produzir diagnóstico claro.
 
@@ -41,11 +43,13 @@ Validar, com uma execução pequena e explícita, que os modelos configurados no
 - o verificador retorna `supports`, `contradicts` ou `uncertain` em JSON válido;
 - a resolução completa gera `trace` com solver, consenso e verificação;
 - falhas são reportadas sem imprimir API keys.
+- a proteção de 40 requisições/minuto existe somente durante a execução do smoke test.
 
 ## Fora de escopo
 
 - benchmark estatístico de qualidade;
 - teste de carga;
+- limitação de requisições do servidor MCP em produção;
 - execução contra provas reais ou sistemas externos.
 
 ## Implementação concluída

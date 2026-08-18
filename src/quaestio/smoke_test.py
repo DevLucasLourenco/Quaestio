@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import argparse
+from collections import deque
+from contextlib import contextmanager
 import json
 import os
 import sys
+import threading
 import time
+import urllib.request
 from dataclasses import asdict, dataclass
 
 from .backends import OpenAICompatibleBackend
@@ -25,6 +29,54 @@ class SmokeCheck:
     status: str
     duration_ms: int
     detail: str
+
+
+class _SmokeRequestLimiter:
+    """Limit provider HTTP calls only while the opt-in smoke command runs."""
+
+    def __init__(self, max_requests: int = 40, window_seconds: float = 60.0) -> None:
+        self.max_requests = max(1, min(max_requests, 40))
+        self.window_seconds = window_seconds
+        self._timestamps: deque[float] = deque()
+        self._lock = threading.Lock()
+
+    def acquire(self) -> None:
+        while True:
+            now = time.monotonic()
+            with self._lock:
+                while self._timestamps and now - self._timestamps[0] >= self.window_seconds:
+                    self._timestamps.popleft()
+                if len(self._timestamps) < self.max_requests:
+                    self._timestamps.append(now)
+                    return
+                wait_seconds = self.window_seconds - (now - self._timestamps[0])
+            time.sleep(max(0.01, wait_seconds))
+
+
+def _smoke_request_limit() -> int:
+    value = os.getenv("QUAESTIO_SMOKE_REQUESTS_PER_MINUTE", "40")
+    try:
+        return max(1, min(int(value), 40))
+    except ValueError:
+        return 40
+
+
+@contextmanager
+def _smoke_request_budget():
+    """Patch the HTTP boundary for this process, without touching MCP runtime code."""
+
+    limiter = _SmokeRequestLimiter(_smoke_request_limit())
+    original_urlopen = urllib.request.urlopen
+
+    def limited_urlopen(*args, **kwargs):
+        limiter.acquire()
+        return original_urlopen(*args, **kwargs)
+
+    urllib.request.urlopen = limited_urlopen
+    try:
+        yield
+    finally:
+        urllib.request.urlopen = original_urlopen
 
 
 def _timed(name: str, operation) -> SmokeCheck:
@@ -186,7 +238,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     load_environment()
-    checks = run_smoke_tests(require_all=args.require_all)
+    with _smoke_request_budget():
+        checks = run_smoke_tests(require_all=args.require_all)
     if args.json:
         print(json.dumps([asdict(check) for check in checks], ensure_ascii=False, indent=2))
     else:

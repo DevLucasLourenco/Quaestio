@@ -25,6 +25,7 @@ Saída: execução reproduzível.
 - calcular acurácia geral;
 - calcular métricas por categoria;
 - medir cobertura e `needs_review`;
+- separar abstenções por revisão de respostas efetivamente incorretas;
 - comparar primary, secondary, consensus e verifier;
 - registrar latência e custo estimado.
 
@@ -58,5 +59,7 @@ Saída: relatório quantitativo.
 - loader JSONL com validação de gabarito;
 - execução em lotes de até 500 itens;
 - relatório estruturado com métricas segmentadas;
+- `needs_review` excluído de `incorrect`, com `coverage` explícita;
 - bins de confiança e cálculo de excesso de confiança;
 - comando `quaestio-evaluate` adicionado ao pacote.
+- dataset sintético `data/evaluation/benchmark-v1.jsonl` criado com 30 questões de matemática, engenharia de software e categorias de controle.

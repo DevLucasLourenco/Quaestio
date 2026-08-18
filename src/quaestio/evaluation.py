@@ -60,6 +60,7 @@ class MetricSummary(BaseModel):
     incorrect: int
     needs_review: int
     failed: int
+    coverage: float | None
     accuracy: float | None
     average_confidence: float | None
 
@@ -139,7 +140,7 @@ def evaluate_dataset(dataset: EvaluationDataset, service: QuaestioService | None
 
 
 def _summarize(records: list[EvaluationRecord]) -> MetricSummary:
-    evaluated = [record for record in records if record.correct is not None]
+    evaluated = [record for record in records if _is_scored(record)]
     correct = sum(record.correct is True for record in evaluated)
     confidence_values = [record.confidence for record in records]
     return MetricSummary(
@@ -149,8 +150,18 @@ def _summarize(records: list[EvaluationRecord]) -> MetricSummary:
         incorrect=sum(record.correct is False for record in evaluated),
         needs_review=sum(record.status == AnswerStatus.NEEDS_REVIEW for record in records),
         failed=sum(record.status == AnswerStatus.ERROR for record in records),
+        coverage=len(evaluated) / len(records) if records else None,
         accuracy=correct / len(evaluated) if evaluated else None,
         average_confidence=sum(confidence_values) / len(confidence_values) if confidence_values else None,
+    )
+
+
+def _is_scored(record: EvaluationRecord) -> bool:
+    """Only produced, non-abstaining answers belong in accuracy metrics."""
+
+    return (
+        record.correct is not None
+        and record.status not in {AnswerStatus.NEEDS_REVIEW, AnswerStatus.ERROR}
     )
 
 
@@ -170,7 +181,7 @@ def _confidence_bins(records: list[EvaluationRecord]) -> list[ConfidenceBin]:
             record for record in records
             if lower <= record.confidence < upper or (index == 4 and record.confidence <= upper)
         ]
-        evaluated = [record for record in selected if record.correct is not None]
+        evaluated = [record for record in selected if _is_scored(record)]
         correct = sum(record.correct is True for record in evaluated)
         accuracy = correct / len(evaluated) if evaluated else None
         average_confidence = sum(record.confidence for record in selected) / len(selected) if selected else None

@@ -409,6 +409,24 @@ pytest -q
 
 Os testes unitários devem ser executados sem depender de chamadas reais aos provedores. Smoke tests contra APIs externas devem ser explícitos, usando credenciais locais e questões autorizadas.
 
+Para validar os endpoints configurados, execute o smoke test opt-in:
+
+```powershell
+quaestio-smoke --require-all --json
+```
+
+`quaestio-smoke` aplica no próprio processo um teto de 40 requisições por minuto, configurável por `QUAESTIO_SMOKE_REQUESTS_PER_MINUTE`. Essa variável não é lida pelo servidor MCP e não limita o uso normal dos backends.
+
+O dataset sintético de 30 questões pode ser avaliado com:
+
+```powershell
+quaestio-evaluate data/evaluation/benchmark-v1.jsonl --output benchmark-report.json
+```
+
+Ele inclui matemática, engenharia de software e categorias de controle; o gabarito é usado somente para medir o resultado e não é enviado ao solver.
+
+No relatório, `needs_review` representa uma abstenção por evidência insuficiente ou divergência entre modelos. Essas ocorrências ficam fora de `incorrect` e reduzem apenas a `coverage`.
+
 Documentação técnica relacionada:
 
 - [especificação e plano de preparação multilíngue](docs/SPEC-TRANSLATION-PIPELINE.md) / [plano](docs/PLAN-TRANSLATION-PIPELINE.md);

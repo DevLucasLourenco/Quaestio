@@ -24,7 +24,7 @@ Cada item deve conter:
 
 - respostas devem ser comparadas por índice quando a questão for objetiva;
 - respostas abertas devem usar normalização e, quando necessário, revisão humana;
-- resultados `needs_review` não podem ser contados como corretos;
+- resultados `needs_review` não podem ser contados como corretos ou incorretos;
 - o relatório deve distinguir acurácia, cobertura e abstenção;
 - mudanças de modelo ou prompt devem gerar uma nova execução identificável.
 
@@ -43,7 +43,7 @@ Nenhuma alteração de threshold deve transformar uma resposta incorreta em `ver
 ## Critérios de aceitação
 
 - existe um dataset inicial com gabarito revisado;
-- a avaliação calcula `evaluated`, `correct` e `accuracy`;
+- a avaliação calcula `evaluated`, `correct`, `incorrect`, `coverage` e `accuracy`;
 - resultados são segmentados por tipo, idioma, imagem e disciplina;
 - o relatório identifica excesso de confiança;
 - uma configuração pode ser comparada com outra;
@@ -58,3 +58,5 @@ Nenhuma alteração de threshold deve transformar uma resposta incorreta em `ver
 ## Implementação concluída
 
 O relatório registra acurácia, cobertura, `needs_review`, média de confiança e gap de excesso de confiança em cinco faixas de confiança. O gabarito permanece no dataset e não é enviado como instrução ao solver.
+
+O primeiro conjunto sintético versionado está em `data/evaluation/benchmark-v1.jsonl`, com 30 questões, incluindo 13 de matemática e 12 de engenharia de software. Ele é separado do `smoke.jsonl`, que permanece como fixture mínima da suíte local.
