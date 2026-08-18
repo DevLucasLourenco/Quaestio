@@ -415,7 +415,7 @@ Para validar os endpoints configurados, execute o smoke test opt-in:
 quaestio-smoke --require-all --json
 ```
 
-`quaestio-smoke` aplica no próprio processo um teto de 40 requisições por minuto, configurável por `QUAESTIO_SMOKE_REQUESTS_PER_MINUTE`. Essa variável não é lida pelo servidor MCP e não limita o uso normal dos backends.
+`quaestio-smoke` aplica internamente, no próprio processo, um teto fixo de 40 requisições por minuto. Essa proteção não é lida pelo servidor MCP e não limita o uso normal dos backends.
 
 O dataset sintético de 30 questões pode ser avaliado com:
 

@@ -53,19 +53,11 @@ class _SmokeRequestLimiter:
             time.sleep(max(0.01, wait_seconds))
 
 
-def _smoke_request_limit() -> int:
-    value = os.getenv("QUAESTIO_SMOKE_REQUESTS_PER_MINUTE", "40")
-    try:
-        return max(1, min(int(value), 40))
-    except ValueError:
-        return 40
-
-
 @contextmanager
 def _smoke_request_budget():
     """Patch the HTTP boundary for this process, without touching MCP runtime code."""
 
-    limiter = _SmokeRequestLimiter(_smoke_request_limit())
+    limiter = _SmokeRequestLimiter()
     original_urlopen = urllib.request.urlopen
 
     def limited_urlopen(*args, **kwargs):
