@@ -8,11 +8,11 @@ Validar, com uma execução pequena e explícita, que os modelos configurados no
 
 ## Componentes a validar
 
-- solver primário: `moonshotai/kimi-k2.6`;
+- solver primário: `stepfun-ai/step-3.7-flash`;
 - solver secundário: `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning`;
-- tradutor: `moonshotai/kimi-k2.6`;
+- tradutor: `stepfun-ai/step-3.7-flash`;
 - embeddings: `nvidia/nemotron-3-embed-1b`;
-- verificador: `mistralai/mistral-small-4-119b-2603`.
+- verificador textual: `openai/gpt-oss-20b`.
 
 ## Regras
 

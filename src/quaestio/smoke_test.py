@@ -56,19 +56,25 @@ def _configured(name: str) -> bool:
 def _chat_check(name: str, prefix: str, model_name: str) -> SmokeCheck:
     def operation() -> str:
         base_url, api_key, model = _required(prefix)
+        timeout_value = os.getenv(f"{prefix}_TIMEOUT_SECONDS") or os.getenv("QUAESTIO_LLM_TIMEOUT_SECONDS", "45")
+        max_tokens_value = os.getenv(f"{prefix}_MAX_TOKENS") or os.getenv("QUAESTIO_LLM_MAX_TOKENS")
         backend = OpenAICompatibleBackend(
             base_url=base_url,
             api_key=api_key,
             model=model,
-            timeout_seconds=float(os.getenv(f"{prefix}_TIMEOUT_SECONDS", "45")),
+            timeout_seconds=float(timeout_value),
             name=name,
+            max_tokens=_optional_int(max_tokens_value),
         )
         outcome = backend.solve(Question(
-            question="Which option is correct? Return the option index only in the JSON contract.",
-            options=["Option A", "Option B"],
+            question="What is the capital of France? Return the option index in the JSON contract.",
+            options=["Madrid", "Paris"],
         ))
         if outcome.proposal is None:
-            raise RuntimeError("provider did not return a parseable proposal")
+            detail = "; ".join(outcome.warnings) or "provider did not return a parseable proposal"
+            raise RuntimeError(detail)
+        if outcome.proposal.option_index != 1:
+            raise RuntimeError(f"provider returned unexpected option_index: {outcome.proposal.option_index!r}")
         return f"model={model_name}; option_index={outcome.proposal.option_index}"
 
     return _timed(name, operation)
@@ -82,6 +88,7 @@ def _translator_check() -> SmokeCheck:
             api_key=api_key,
             model=model,
             timeout_seconds=float(os.getenv("QUAESTIO_TRANSLATOR_TIMEOUT_SECONDS", "30")),
+            max_tokens=_optional_int(os.getenv("QUAESTIO_TRANSLATOR_MAX_TOKENS")),
         )
         translated = translator.translate_question(
             Question(question="Qual é a capital do Brasil?", options=["Rio de Janeiro", "Brasília"]),
@@ -120,6 +127,8 @@ def _verifier_check() -> SmokeCheck:
             api_key=api_key,
             model=model,
             timeout_seconds=float(os.getenv("QUAESTIO_VERIFIER_LLM_TIMEOUT_SECONDS", "45")),
+            max_tokens=_optional_int(os.getenv("QUAESTIO_VERIFIER_LLM_MAX_TOKENS")),
+            supports_images=os.getenv("QUAESTIO_VERIFIER_LLM_SUPPORTS_IMAGES", "true").casefold() in {"1", "true", "yes"},
         )
         result = verifier.verify(
             Question(question="Which option is correct?", options=["Option A", "Option B"]),
@@ -184,6 +193,16 @@ def main(argv: list[str] | None = None) -> int:
         _print_human(checks)
     failed = any(check.status == "failed" for check in checks)
     return 1 if failed else 0
+
+
+def _optional_int(value: str | None) -> int | None:
+    if value is None or not value.strip():
+        return None
+    try:
+        parsed = int(value)
+    except ValueError:
+        return None
+    return parsed if parsed > 0 else None
 
 
 if __name__ == "__main__":

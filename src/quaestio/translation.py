@@ -184,11 +184,12 @@ class OpenAICompatibleTranslator:
 
     name = "openai_compatible_translator"
 
-    def __init__(self, base_url: str, api_key: str, model: str, timeout_seconds: float = 30) -> None:
+    def __init__(self, base_url: str, api_key: str, model: str, timeout_seconds: float = 30, max_tokens: int | None = None) -> None:
         self.base_url = base_url
         self.api_key = api_key
         self.model = model
         self.timeout_seconds = timeout_seconds
+        self.max_tokens = max_tokens
 
     def translate_question(self, question: Question, source_language: str, target_language: str) -> Question:
         source = {
@@ -258,6 +259,8 @@ class OpenAICompatibleTranslator:
                 {"role": "user", "content": prompt},
             ],
         }
+        if self.max_tokens is not None:
+            payload["max_tokens"] = self.max_tokens
         request = urllib.request.Request(
             f"{self.base_url.rstrip('/')}/chat/completions",
             data=json.dumps(payload).encode("utf-8"),
@@ -267,12 +270,26 @@ class OpenAICompatibleTranslator:
         with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
             body = json.loads(response.read().decode("utf-8"))
         message = body["choices"][0]["message"]
-        content = message.get("content") if isinstance(message, dict) else None
-        if isinstance(content, list):
-            content = "".join(str(item.get("text", "")) for item in content if isinstance(item, dict))
+        content = self._message_content(message)
         if not isinstance(content, str):
             raise ValueError("translation response did not contain text content")
         return self._parse_json(content)
+
+    @staticmethod
+    def _message_content(message: object) -> str | None:
+        if not isinstance(message, dict):
+            return None
+        content = message.get("content")
+        if isinstance(content, list):
+            content = "".join(
+                str(item.get("text", ""))
+                for item in content
+                if isinstance(item, dict) and isinstance(item.get("text"), str)
+            )
+        if isinstance(content, str) and content.strip():
+            return content
+        reasoning_content = message.get("reasoning_content")
+        return reasoning_content if isinstance(reasoning_content, str) and reasoning_content.strip() else None
 
     @staticmethod
     def _parse_json(content: str) -> dict[str, object]:
@@ -327,7 +344,18 @@ def configured_translation_backend() -> TranslationBackend | None:
         api_key=api_key,
         model=model,
         timeout_seconds=float(os.getenv("QUAESTIO_TRANSLATOR_TIMEOUT_SECONDS", "30")),
+        max_tokens=_optional_int(os.getenv("QUAESTIO_TRANSLATOR_MAX_TOKENS")),
     )
+
+
+def _optional_int(value: str | None) -> int | None:
+    if value is None or not value.strip():
+        return None
+    try:
+        parsed = int(value)
+    except ValueError:
+        return None
+    return parsed if parsed > 0 else None
 
 
 def configured_question_preparer() -> QuestionPreparer:
